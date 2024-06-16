@@ -1,0 +1,46 @@
+﻿@page "/editar-tarea/{id:int}"
+@using BlazorAppAdminTareas.Contracts
+@using BlazorAppAdminTareas.Entities
+@inject ITareasService ServicioTareas
+@inject NavigationManager Navigation
+@code {
+    [Parameter] public int Id { get; set; }
+    private LasTareas tarea = new LasTareas();
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tarea = await ServicioTareas.ObtenerTareaPorIdAsync(Id);
+        cargando = false;
+    }
+
+    private async Task ActualizarTarea()
+    {
+        await ServicioTareas.ActualizarTareaAsync(tarea);
+        Navigation.NavigateTo("/tareas");
+    }
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <EditForm Model="tarea" OnValidSubmit="ActualizarTarea">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label for="titulo" class="form-label">Título</label>
+            <InputText id="titulo" class="form-control" @bind-Value="tarea.Titulo" />
+        </div>
+
+        <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción</label>
+            <InputTextArea id="descripcion" class="form-control" @bind-Value="tarea.Descripcion" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Actualizar Tarea</button>
+    </EditForm>
+}

@@ -1,0 +1,107 @@
+﻿@page "/tareas"
+@rendermode InteractiveServer
+@using BlazorAppAdminTareas.Entities
+@using BlazorAppAdminTareas.Contracts
+@inject ITareasService ServicioTareas
+
+<h3>Lista de Tareas</h3>
+<button class="btn btn-success" @onclick="AddTarea">Nueva Tarea</button>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Descripción</th>
+            <th>Estado</th>
+            <th>Bloqueada</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var tarea in tareas)
+        {
+            <tr>
+                <td>@tarea.Titulo</td>
+                <td>@tarea.Descripcion</td>
+                <td>@tarea.Estado</td>
+
+                @if (tarea.EstaBloqueada)
+                {
+                    <td>
+                        Si
+                    </td>
+                }
+                else
+                {
+                    <td>
+                        No
+                    </td>
+                }                
+                <td>
+                    <button class="btn btn-primary" @onclick="@(async () => await ActualizarEstadoTarea(tarea, EstadoTarea.Iniciada))" disabled="@((int)tarea.Estado >= (int)EstadoTarea.Iniciada)">Iniciar</button>
+                    <button class="btn btn-warning" @onclick="@(async () => await ActualizarEstadoTarea(tarea, EstadoTarea.EnCurso))" disabled="@((int)tarea.Estado >= (int)EstadoTarea.EnCurso)">En Curso</button>
+                    <button class="btn btn-success" @onclick="@(async () => await ActualizarEstadoTarea(tarea, EstadoTarea.Completada))" disabled="@((int)tarea.Estado >= (int)EstadoTarea.Completada)">Completar</button>
+                    <button class="btn btn-danger" @onclick="@(async () => await EliminarTarea(tarea.Id))">Eliminar</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<button class="btn btn-secondary" @onclick="CargarMasTareas">Cargar Más</button>
+
+@code {
+    private List<LasTareas> tareas = new List<LasTareas>();
+    private int paginaActual = 1;
+    private const int tamanoPagina = 20;
+    private bool cargando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTareas();
+    }
+
+    private async Task CargarTareas()
+    {
+        cargando = true;
+        var nuevasTareas = await ServicioTareas.ObtenerTareasAsync(paginaActual, tamanoPagina);
+        tareas.AddRange(nuevasTareas);
+        paginaActual++;
+        cargando = false;
+    }
+
+    private async Task CargarMasTareas()
+    {
+        if (!cargando)
+        {
+            await CargarTareas();
+        }
+    }
+
+    private async Task ActualizarEstadoTarea(LasTareas tarea, EstadoTarea nuevoEstado)
+    {
+        await ServicioTareas.ActualizarEstadoTareaAsync(tarea.Id, nuevoEstado);
+        tarea.Estado = nuevoEstado; // Actualizamos el estado localmente para reflejar el cambio inmediatamente
+    }
+
+    private async Task EliminarTarea(int id)
+    {
+        await ServicioTareas.EliminarTareaAsync(id);
+        var tarea = tareas.FirstOrDefault(t => t.Id == id);
+        if (tarea != null)
+        {
+            tareas.Remove(tarea); // Eliminamos la tarea localmente para reflejar el cambio inmediatamente
+        }
+    }
+
+    private async Task AddTarea()
+    {
+        var nuevaTarea = new LasTareas
+            {
+                Titulo = "Nueva Tarea",
+                Descripcion = "Descripción de la nueva tarea",
+                Estado = EstadoTarea.Planificada
+            };
+
+        await ServicioTareas.AgregarTareaAsync(nuevaTarea);
+    }
+}
